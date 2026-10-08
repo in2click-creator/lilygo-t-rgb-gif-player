@@ -1,3 +1,9 @@
+
+
+https://github.com/user-attachments/assets/70dd303e-0e11-4f72-a54c-c1ddad8f16f8
+
+
+
 # LILYGO T-RGB GIF Player
 
 English | [Русский](README_RU.md)

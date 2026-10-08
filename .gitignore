@@ -1,0 +1,27 @@
+# Local builds and tooling
+build/
+dist/
+.pio/
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+*.elf
+*.bin
+*.map
+*.o
+*.d
+*.raw
+*.zip
+# Generated host-test data
+/tests/fixtures/
+/tests/decoder_test
+/tests/decoder_test.exe
+# OS files
+.DS_Store
+Thumbs.db
+# Local credentials and configuration
+.env
+.env.*
+!.env.example
+arduino-cli.local.yaml

@@ -3,6 +3,7 @@
 #include <vector>
 #include <fstream>
 #include "../LilyGo_GifPlayer/GifCanvas.h"
+#include "../LilyGo_GifPlayer/PlaybackTiming.h"
 static GifCanvas c;
 static void draw(GIFDRAW*d){c.draw(*d);}
 static void* openFile(const char*name,int32_t*size){FILE*f=fopen(name,"rb");if(!f)return nullptr;fseek(f,0,SEEK_END);*size=ftell(f);fseek(f,0,SEEK_SET);return f;}
@@ -22,6 +23,7 @@ int main(int argc,char**argv){
  c.configure(w,h,bg);
  for(int i=0;i<20;++i){c.startDecode();int delay=0;int more=gif.playFrame(false,&delay);if(more<0||c.invalid){printf("DECODE ERROR %d\n",gif.getLastError());return 5;}
   if(c.sawLine){char p[1024];snprintf(p,sizeof(p),"%s-%d.raw",argv[2],i);std::ofstream o(p,std::ios::binary);o.write((char*)pixels.data(),pixels.size()*2);printf("%d %d\n",i,delay);}
+  printf("STEP %d %d %d %u\n",more,c.sawLine,delay,playbackWaitMs(c.sawLine,delay));
   if(!more)break;
  }
  gif.close();

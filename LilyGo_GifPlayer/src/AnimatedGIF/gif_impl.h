@@ -522,6 +522,12 @@ static int GIFParseInfo(GIFIMAGE *pPage, int bInfoOnly)
         }
         pPage->bUseLocalPalette = 1;
     }
+    // Validate the file-controlled index before table access or LZW shifts.
+    // GIF uses a minimum code size of 2 even for monochrome images.
+    if (iOffset >= iBytesRead || p[iOffset] < 2 || p[iOffset] > 8) {
+        pPage->iError = GIF_DECODE_ERROR;
+        return 0;
+    }
     pPage->ucCodeStart = p[iOffset++]; /* initial code size */
     /* Since GIF can be 1-8 bpp, we only allow 1,4,8 */
     pPage->iBpp = cGIFBits[pPage->ucCodeStart];

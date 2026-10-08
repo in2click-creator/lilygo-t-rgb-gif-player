@@ -21,3 +21,7 @@ It does not use COOKED or turbo modes. Palette changes, transparency, frame
 rectangles, and disposal 2/3 are handled by GifCanvas.h.
 
 4. Added local-modification notices and normalized trailing whitespace.
+
+5. Reject missing or out-of-range LZW minimum code sizes before indexing
+   `cGIFBits` or entering LZW decoding. Legal values are 2 through 8. This fixes
+   the reproduced out-of-bounds read; it is not a full malformed-GIF audit.

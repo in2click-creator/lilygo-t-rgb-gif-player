@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <limits.h>
 #include "GifCanvas.h"
+#include "PlaybackTiming.h"
 #include "TinyText.h"
 
 #if ESP_ARDUINO_VERSION_MAJOR != 2
@@ -265,7 +266,7 @@ void scanCard() {
 
 void playerSetup() {
     Serial.begin(115200);
-    Serial.println("\nLILYGO GIF PLAYER v1.0");
+    Serial.println("\nLILYGO GIF PLAYER v1.0.1-test");
     Serial.printf("PSRAM: %lu bytes, free: %lu\n",
                   (unsigned long)ESP.getPsramSize(), (unsigned long)ESP.getFreePsram());
     if (!psramFound()) {
@@ -321,10 +322,8 @@ void playerLoop() {
         failure("EMPTY GIF", "NO IMAGE FRAMES"); return;
     }
     restartPending = (more == 0);
-    // Respect GIF delays without blocking touch. Zero delay means 100 ms;
-    // delays shorter than 20 ms are clamped to avoid a busy loop.
-    if (duration <= 0) duration = 100;
-    if (duration < 20) duration = 20;
-    nextFrameAt = started + (uint32_t)duration;
+    // Preserve the last frame's delay, but don't add a delay for trailing
+    // metadata when the decoder reaches EOF without rendering another frame.
+    nextFrameAt = started + playbackWaitMs(canvas.sawLine, duration);
     delay(1);
 }

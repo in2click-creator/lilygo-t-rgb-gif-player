@@ -8,6 +8,7 @@
 #include <limits.h>
 #include "GifCanvas.h"
 #include "PlaybackTiming.h"
+#include "PlaybackStats.h"
 #include "TinyText.h"
 
 #if ESP_ARDUINO_VERSION_MAJOR != 2
@@ -36,6 +37,26 @@ bool requestRescan = false;
 int pendingStep = 0;
 uint32_t nextFrameAt = 0, lastInputAt = 0;
 uint32_t framesPlayed = 0;
+PlaybackStats stats;
+bool diagnostics = false, toggleDiagnostics = false;
+
+void reportStats() {
+    uint32_t now = millis();
+    if (!diagnostics || stats.elapsed(now) < 5000) return;
+    // Skip a report rather than wait for a disconnected or full USB port.
+    char line[256];
+    int n = snprintf(line, sizeof(line),
+        "[PERF] #%d fps=%.1f n=%lu decode=%.2f/%.2f output=%.2f/%.2f ms "
+        "over=%lu reopen=%lu:%.2f/%.2f ms\n",
+        selected + 1, stats.fps(now), (unsigned long)stats.decode.count,
+        stats.decode.meanMs(), stats.decode.maxUs / 1000.0,
+        stats.output.meanMs(), stats.output.maxUs / 1000.0,
+        (unsigned long)stats.overBudget, (unsigned long)stats.reopen.count,
+        stats.reopen.meanMs(), stats.reopen.maxUs / 1000.0);
+    if (Serial && n > 0 && n < (int)sizeof(line) && Serial.availableForWrite() >= n)
+        Serial.write((const uint8_t *)line, n);
+    stats.reset(now);
+}
 
 String basenameOf(const String &s) {
     return s.substring(s.lastIndexOf('/') + 1);
@@ -105,6 +126,7 @@ void pollInput() {
         if (c == 'n' || c == 'N') pendingStep = 1;
         if (c == 'p' || c == 'P') pendingStep = -1;
         if (c == 'r' || c == 'R') requestRescan = true;
+        if (c == 'd' || c == 'D') toggleDiagnostics = !toggleDiagnostics;
     }
 }
 
@@ -207,6 +229,7 @@ void openSelected(bool showLoading) {
     playing = true;
     framesPlayed = 0;
     nextFrameAt = millis();
+    if (showLoading) stats.reset(nextFrameAt);
 }
 
 void scanCard() {
@@ -266,7 +289,7 @@ void scanCard() {
 
 void playerSetup() {
     Serial.begin(115200);
-    Serial.println("\nLILYGO GIF PLAYER v1.0.1-test");
+    Serial.println("\nLILYGO GIF PLAYER v1.0.2-perf");
     Serial.printf("PSRAM: %lu bytes, free: %lu\n",
                   (unsigned long)ESP.getPsramSize(), (unsigned long)ESP.getFreePsram());
     if (!psramFound()) {
@@ -285,13 +308,19 @@ void playerSetup() {
         return;
     }
     Serial.printf("Touch: %s\n", panel.getTouchModelName());
-    Serial.println("Swipe left: next. Swipe right: previous. Serial: n / p / r (rescan).");
+    Serial.println("Swipe left: next. Swipe right: previous. Serial: n / p / r (rescan) / d (diagnostics on/off).");
     scanCard();
 }
 
 void playerLoop() {
     if (!panelReady) { delay(20); return; }
     pollInput();
+    if (toggleDiagnostics) {
+        toggleDiagnostics = false;
+        diagnostics = !diagnostics;
+        stats.reset(millis());
+        Serial.printf("[PERF] %s; mean/max timings in ms\n", diagnostics ? "ON" : "OFF");
+    }
     if (requestRescan || (pendingStep && !count)) {
         pendingStep = 0; requestRescan = false; scanCard();
     } else if (pendingStep) {
@@ -301,13 +330,17 @@ void playerLoop() {
     }
     if (!playing || (int32_t)(millis()-nextFrameAt) < 0) { delay(1); return; }
     if (restartPending) {
+        uint32_t reopenAt = diagnostics ? micros() : 0;
         openSelected(false);
+        if (diagnostics && playing) stats.reopen.add(micros() - reopenAt);
         if (!playing) return;
     }
     uint32_t started = millis();
     canvas.startDecode();
     int duration = 0;
+    uint32_t decodeAt = diagnostics ? micros() : 0;
     int more = decoder.playFrame(false, &duration);
+    uint32_t decodeUs = diagnostics ? micros() - decodeAt : 0;
     if (pendingStep || requestRescan) { delay(1); return; }
     if (more < 0 || ioFault || canvas.invalid) {
         char note[31];
@@ -316,7 +349,10 @@ void playerLoop() {
         return;
     }
     if (canvas.sawLine) {
+        uint32_t outputAt = diagnostics ? micros() : 0;
         present();
+        uint32_t outputUs = diagnostics ? micros() - outputAt : 0;
+        if (diagnostics) stats.frame(decodeUs, outputUs, playbackWaitMs(true, duration));
         ++framesPlayed;
     } else if (!framesPlayed) {
         failure("EMPTY GIF", "NO IMAGE FRAMES"); return;
@@ -325,5 +361,6 @@ void playerLoop() {
     // Preserve the last frame's delay, but don't add a delay for trailing
     // metadata when the decoder reaches EOF without rendering another frame.
     nextFrameAt = started + playbackWaitMs(canvas.sawLine, duration);
+    reportStats();
     delay(1);
 }

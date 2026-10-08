@@ -7,8 +7,10 @@
 - Add regression checks for all 249 invalid LZW size bytes, loop timing,
   and AddressSanitizer coverage of those cases.
 - Provide generated device-check GIFs as a CI artifact and a hardware checklist.
-- Hardware verification of these changes is pending; the initial-release
-  hardware report below does not validate this test build.
+- Basic hardware verification reported by the owner on 2026-10-09:
+  both synthetic animations and personal GIFs play, swipes work, and the invalid
+  LZW file shows an error with successful navigation to the next GIF.
+  See `docs/VALIDATION.md` for the tested source and remaining checks.
 
 ## 1.0.0 — Initial release
 

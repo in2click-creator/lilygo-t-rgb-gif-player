@@ -28,6 +28,8 @@ jobs:
         run: |
           g++ -std=c++11 tests/timing_test.cpp -o /tmp/timing_test
           /tmp/timing_test
+          g++ -std=c++11 -Wall -Wextra tests/stats_test.cpp -o /tmp/stats_test
+          /tmp/stats_test
           python tests/test_regressions.py
       - name: Check malformed GIFs with AddressSanitizer
         run: |

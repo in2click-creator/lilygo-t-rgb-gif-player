@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — v1.0.2-perf diagnostics
+
+- Optional Serial diagnostics: `d` toggles a summary every five seconds.
+- Report observed submitted-frame rate, mean/max decode and output time,
+  frames exceeding their processing budget, and mean/max GIF reopen time.
+- Reset statistics when selecting another file; exclude status screens and
+  metadata-only decoder calls. Skip reports when USB cannot accept the line.
+- No playback optimisation yet; hardware measurements are pending.
+- See `docs/PERFORMANCE_RU.md` for the measurement procedure and definitions.
+
 ## Unreleased — v1.0.1-test
 
 - Reject invalid LZW minimum code sizes before accessing decoder tables.

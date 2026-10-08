@@ -32,12 +32,25 @@ g++ -std=c++11 -D__LINUX__ -O2 \
   tests/decoder_test.cpp LilyGo_GifPlayer/src/AnimatedGIF/AnimatedGIF.cpp \
   -o tests/decoder_test
 python3 tests/test_gifs.py
+g++ -std=c++11 tests/timing_test.cpp -o /tmp/timing_test
+/tmp/timing_test
+python3 tests/test_regressions.py
+g++ -std=c++11 -D__LINUX__ -O1 -g -fsanitize=address -fno-omit-frame-pointer \
+  tests/decoder_test.cpp LilyGo_GifPlayer/src/AnimatedGIF/AnimatedGIF.cpp \
+  -o /tmp/decoder_sanitized
+DECODER_TEST=/tmp/decoder_sanitized python3 tests/test_regressions.py
 ```
 
 Tests generate their own GIFs, decode through file read/seek callbacks, and
 compare every output pixel against Pillow after compositing, RGB565 conversion
 and centre-crop scaling. The generated fixtures and raw frames are ignored by Git.
 The test suite does not emulate SD electrical behaviour or touchscreen hardware.
+Regression tests also compare normal/trailing-comment loop timing, reject all
+249 illegal LZW minimum-code-size bytes, and generate the three hardware-check
+GIFs in `tests/fixtures/device/gif`. The shared timing helper is exercised on the
+host; the full Arduino event loop and hardware drivers are not emulated.
+CI publishes the files as `lilygo-device-check`; follow
+[`HARDWARE_CHECK_RU.md`](HARDWARE_CHECK_RU.md) on the actual board.
 
 ## Release
 

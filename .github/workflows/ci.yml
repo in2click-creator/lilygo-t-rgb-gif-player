@@ -24,6 +24,25 @@ jobs:
           -o tests/decoder_test
       - name: Compare frames with Pillow
         run: python tests/test_gifs.py
+      - name: Check playback timing and decoder regressions
+        run: |
+          g++ -std=c++11 tests/timing_test.cpp -o /tmp/timing_test
+          /tmp/timing_test
+          python tests/test_regressions.py
+      - name: Check malformed GIFs with AddressSanitizer
+        run: |
+          g++ -std=c++11 -D__LINUX__ -O1 -g -fsanitize=address -fno-omit-frame-pointer \
+            tests/decoder_test.cpp LilyGo_GifPlayer/src/AnimatedGIF/AnimatedGIF.cpp \
+            -o /tmp/decoder_sanitized
+          DECODER_TEST=/tmp/decoder_sanitized python tests/test_regressions.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: lilygo-device-check
+          path: |
+            tests/fixtures/device/gif/*.gif
+            docs/HARDWARE_CHECK_RU.md
+          if-no-files-found: error
+          retention-days: 30
 
   firmware:
     runs-on: ubuntu-24.04
